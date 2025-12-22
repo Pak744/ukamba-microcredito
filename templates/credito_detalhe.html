@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Crédito #{{ credito.id_credito }} | Detalhe</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#fff;
+      --text:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --blue:#0D47A1;
+      --blue-soft:#e3f2fd;
+      --danger:#b91c1c;
+      --success:#15803d;
+      --warning:#b45309;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    header{
+      background:var(--blue);
+      color:#fff;
+      padding:14px 22px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    header .title{
+      font-size:18px;
+      font-weight:700;
+    }
+    header a{
+      color:#bfdbfe;
+      text-decoration:none;
+      font-size:13px;
+    }
+    header a:hover{text-decoration:underline}
+    .wrap{
+      max-width:1120px;
+      margin:18px auto 32px;
+      padding:0 16px;
+    }
+    .row{
+      display:grid;
+      grid-template-columns:2.1fr 1.2fr;
+      gap:16px;
+      margin-bottom:16px;
+    }
+    .row-bottom{
+      display:grid;
+      grid-template-columns:1.6fr 1.4fr;
+      gap:16px;
+    }
+    @media(max-width:980px){
+      .row,.row-bottom{grid-template-columns:1fr}
+    }
+    .card{
+      background:var(--card);
+      border-radius:14px;
+      padding:16px 18px;
+      box-shadow:0 2px 10px rgba(15,23,42,.08);
+    }
+    .card h2{
+      margin:0 0 10px;
+      font-size:16px;
+    }
+    .muted{color:var(--muted);font-size:12px}
+    .summary-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:10px;
+      margin-top:8px;
+    }
+    @media(max-width:880px){
+      .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    .metric{
+      background:var(--blue-soft);
+      border-radius:10px;
+      padding:10px;
+    }
+    .metric .k{
+      font-size:12px;
+      color:#1e3a8a;
+    }
+    .metric .v{
+      margin-top:4px;
+      font-weight:700;
+      font-size:15px;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:8px;
+      font-size:13px;
+    }
+    th,td{
+      padding:8px 8px;
+      border-bottom:1px solid var(--line);
+      text-align:left;
+    }
+    th{
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+    }
+    tr:hover td{background:#f9fafb}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:600;
+    }
+    .pill-success{background:#dcfce7;color:var(--success);}
+    .pill-warning{background:#fef9c3;color:var(--warning);}
+    .pill-danger{background:#fee2e2;color:var(--danger);}
+
+    label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:4px;
+    }
+    input,select,textarea{
+      width:100%;
+      border-radius:10px;
+      border:1px solid var(--line);
+      padding:8px 10px;
+      font-size:13px;
+      outline:none;
+      transition:border .15s, box-shadow .15s;
+      font-family:inherit;
+    }
+    input:focus,select:focus,textarea:focus{
+      border-color:#2563eb;
+      box-shadow:0 0 0 1px rgba(37,99,235,.1);
+    }
+    textarea{min-height:76px;resize:vertical;}
+    .form-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+    @media(max-width:720px){
+      .form-grid{grid-template-columns:1fr}
+    }
+    .btn{
+      border:none;
+      border-radius:999px;
+      padding:9px 18px;
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+    }
+    .btn-primary{
+      background:var(--blue);
+      color:#fff;
+    }
+    .btn-primary:disabled{
+      opacity:.65;
+      cursor:wait;
+    }
+    .btn-outline{
+      background:#fff;
+      color:var(--blue);
+      border:1px solid #bfdbfe;
+    }
+    .btn-xs{
+      padding:4px 10px;
+      font-size:11px;
+      border-radius:999px;
+    }
+    .btn-danger{
+      background:var(--danger);
+      color:#fff;
+      border:none;
+    }
+    .btn-danger.btn-xs{
+      background:#ef4444;
+    }
+    .top-actions{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:10px;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .badge-id{
+      font-size:11px;
+      padding:2px 8px;
+      border-radius:999px;
+      background:#e5e7eb;
+      color:#374151;
+    }
+    .alert{
+      margin-top:8px;
+      font-size:12px;
+      padding:6px 8px;
+      border-radius:8px;
+    }
+    .alert-error{background:#fee2e2;color:var(--danger);}
+    .alert-success{background:#dcfce7;color:var(--success);}
+  </style>
+</head>
+<body>
+<header>
+  <div class="title">
+    Crédito #{{ credito.id_credito }} — {{ credito.nome }}
+  </div>
+  <div style="display:flex;gap:14px;align-items:center;">
+    <a href="/dashboard/creditos">← Voltar à lista</a>
+    <a href="/dashboard">Ir para o dashboard</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- RESUMO DO CRÉDITO -->
+  <div class="card">
+    <div class="top-actions">
+      <div>
+        <div style="font-size:14px;font-weight:600;">Resumo do crédito</div>
+        <div class="muted">
+          Telefone: <strong>{{ credito.telefone }}</strong> ·
+          Profissão: <strong>{{ credito.profissao }}</strong> ·
+          Período: <strong>{{ credito.duracao_meses }} meses</strong>
+        </div>
+      </div>
+      <div class="pill
+        {% if credito.estado == 'Concluído' %}pill-success
+        {% elif credito.estado == 'Devedor' %}pill-danger
+        {% else %}pill-success{% endif %}">
+        {{ credito.estado }}
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="metric">
+        <div class="k">Valor solicitado</div>
+        <div class="v">{{ "{:,.2f}".format(credito.valor_solicitado).replace(",", "X").replace(".", ",").replace("X", " ") }} Kz</div>
+      </div>
+      <div class="metric">
+        <div class="k">Total a reembolsar</div>
+        <div class="v">{{ "{:,.2f}".format(credito.valor_total_reembolsar).replace(",", "X").replace(".", ",").replace("X", " ") }} Kz</div>
+      </div>
+      <div class="metric">
+        <div class="k">Pago até hoje</div>
+        <div class="v">{{ "{:,.2f}".format(credito.valor_pago).replace(",", "X").replace(".", ",").replace("X", " ") }} Kz</div>
+      </div>
+      <div class="metric">
+        <div class="k">Saldo em aberto</div>
+        <div class="v">{{ "{:,.2f}".format(credito.saldo_em_aberto).replace(",", "X").replace(".", ",").replace("X", " ") }} Kz</div>
+      </div>
+    </div>
+
+    <div class="muted" style="margin-top:10px;">
+      Início: <strong>{{ credito.data_inicio }}</strong> ·
+      Fim previsto: <strong>{{ credito.data_fim }}</strong> ·
+      Taxa de juros: <strong>{{ "{:.2f}".format(credito.taxa_juros) }}%</strong> ·
+      Prestação mensal: <strong>{{ "{:,.2f}".format(credito.prestacao_mensal).replace(",", "X").replace(".", ",").replace("X", " ") }} Kz</strong>
+    </div>
+    {% if credito.comentario %}
+      <div class="muted" style="margin-top:4px;">Comentário: {{ credito.comentario }}</div>
+    {% endif %}
+  </div>
+
+  <div class="row">
+    <!-- Tabela de pagamentos -->
+    <div class="card">
+      <h2>Pagamentos registados</h2>
+      <div class="muted">Histórico de todos os pagamentos deste crédito.</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Comprovativo</th>
+            <th>Valor pago</th>
+            <th>Forma</th>
+            <th>Atendente</th>
+            <th style="width:70px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if pagamentos and pagamentos|length > 0 %}
+            {% for p in pagamentos %}
+              <tr>
+                <td>{{ p.data_pagamento }}</td>
+                <td>{{ p.nr_comprovativo }}</td>
+                <td>{{ "{:,.2f}".format(p.valor_pago_no_dia).replace(",", "X").replace(".", ",").replace("X", " ") }} Kz</td>
+                <td>{{ p.forma_pagamento }}</td>
+                <td>{{ p.atendente_nome or "" }}</td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-danger btn-xs"
+                    data-del-id="{{ p.id_pagamento }}">
+                    Apagar
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" class="muted">Ainda não há pagamentos registados para este crédito.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Formulário: novo pagamento -->
+    <div class="card">
+      <h2>Registrar novo pagamento</h2>
+      <div class="muted" style="margin-bottom:8px;">
+        Preencha os dados abaixo e clique em <strong>"Gravar pagamento"</strong>.
+        O saldo e o estado do crédito serão atualizados automaticamente.
+      </div>
+
+      <form id="formPagamento">
+        <div class="form-grid">
+          <div>
+            <label for="valor_pago_no_dia">Valor pago hoje (Kz)</label>
+            <input id="valor_pago_no_dia" name="valor_pago_no_dia" type="number" min="0" step="0.01" required />
+          </div>
+          <div>
+            <label for="data_pagamento">Data do pagamento</label>
+            <input id="data_pagamento" name="data_pagamento" type="date" required />
+          </div>
+        </div>
+
+        <div class="form-grid" style="margin-top:8px;">
+          <div>
+            <label for="forma_pagamento">Forma de pagamento</label>
+            <input id="forma_pagamento" name="forma_pagamento" type="text" placeholder="Dinheiro, Transferência, Multicaixa..." required />
+          </div>
+          <div>
+            <label for="nr_comprovativo">Nº Comprovativo (opcional)</label>
+            <input id="nr_comprovativo" name="nr_comprovativo" type="text" placeholder="Se deixar vazio, será gerado automaticamente" />
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <label for="observacao">Observação (opcional)</label>
+          <textarea id="observacao" name="observacao" placeholder="Notas internas, referência, etc."></textarea>
+        </div>
+
+        <div id="alertPagamento" class="alert" style="display:none;"></div>
+
+        <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:10px;">
+          <button type="submit" class="btn btn-primary" id="btnSalvarPagamento">
+            Gravar pagamento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Ações extras: extrato PDF / CSV -->
+  <div class="row-bottom" style="margin-top:18px;">
+    <div class="card">
+      <h2>Relatórios deste crédito</h2>
+      <div class="muted" style="margin-bottom:8px;">
+        Pode exportar o extrato completo deste crédito em PDF ou CSV.
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        <a class="btn btn-outline" href="/relatorios/creditos/{{ credito.id_credito }}/extrato.pdf" target="_blank">
+          Extrato PDF
+        </a>
+        <a class="btn btn-outline" href="/relatorios/creditos/{{ credito.id_credito }}/extrato.csv" target="_blank">
+          Extrato CSV
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Atenção</h2>
+      <div class="muted">
+        Uma vez registado o pagamento, o valor pago é somado ao total do crédito.
+        O saldo em aberto e o estado (<em>Ativo</em>, <em>Devedor</em>, <em>Concluído</em>) serão recalculados automaticamente.
+        Caso seja registado um pagamento errado, pode apagá-lo na tabela ao lado.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Preenche a data de pagamento com hoje, por conveniência
+  (function setToday(){
+    const el = document.getElementById('data_pagamento');
+    if(!el) return;
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth()+1).padStart(2,"0");
+    const dd = String(today.getDate()).padStart(2,"0");
+    el.value = `${yyyy}-${mm}-${dd}`;
+  })();
+
+  const form = document.getElementById('formPagamento');
+  const btn = document.getElementById('btnSalvarPagamento');
+  const alertBox = document.getElementById('alertPagamento');
+
+  function showAlert(msg, type){
+    if(!alertBox) return;
+    alertBox.textContent = msg;
+    alertBox.className = 'alert ' + (type === 'error' ? 'alert-error' : 'alert-success');
+    alertBox.style.display = 'block';
+  }
+
+  // Novo pagamento
+  if(form){
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      alertBox.style.display = 'none';
+
+      const valorStr = document.getElementById('valor_pago_no_dia').value.trim();
+      const dataPag = document.getElementById('data_pagamento').value;
+      const forma = document.getElementById('forma_pagamento').value.trim();
+      const nr = document.getElementById('nr_comprovativo').value.trim();
+      const obs = document.getElementById('observacao').value.trim();
+
+      const valor = parseFloat(valorStr.replace(",", "."));
+      if(isNaN(valor) || valor <= 0){
+        showAlert("Informe um valor pago válido (maior que zero).", "error");
+        return;
+      }
+      if(!dataPag){
+        showAlert("Informe a data do pagamento.", "error");
+        return;
+      }
+      if(!forma){
+        showAlert("Informe a forma de pagamento.", "error");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Gravando...";
+
+      // Se não preencher o nº de comprovativo, gera um automático
+      const compro = nr || `CRED{{ credito.id_credito }}-${Date.now()}`;
+
+      const payload = {
+        id_credito: {{ credito.id_credito }},
+        nr_comprovativo: compro,
+        data_pagamento: dataPag,
+        valor_pago_no_dia: valor,
+        forma_pagamento: forma,
+        observacao: obs || null,
+        id_atendente: null
+      };
+
+      try{
+        const resp = await fetch('/pagamentos', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+
+        if(!resp.ok){
+          let msg = "Falha ao gravar pagamento.";
+          try{
+            const data = await resp.json();
+            if(data && data.detail){ msg = data.detail; }
+          }catch(_){}
+          showAlert(msg, "error");
+        }else{
+          showAlert("Pagamento registado com sucesso! A página será atualizada.", "success");
+          setTimeout(() => {
+            window.location.reload();
+          }, 900);
+        }
+      }catch(err){
+        console.error(err);
+        showAlert("Erro de comunicação com o servidor.", "error");
+      }finally{
+        btn.disabled = false;
+        btn.textContent = "Gravar pagamento";
+      }
+
+    });
+  }
+
+  // Apagar pagamento
+  function wireDeleteButtons(){
+    const buttons = document.querySelectorAll('[data-del-id]');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-del-id');
+        if(!id) return;
+
+        const ok = confirm("Tens a certeza que queres apagar este pagamento?");
+        if(!ok) return;
+
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = "Apagando...";
+
+        try{
+          const resp = await fetch(`/pagamentos/${id}`, {
+            method: 'DELETE'
+          });
+
+          if(!resp.ok){
+            let msg = "Falha ao apagar pagamento.";
+            try{
+              const data = await resp.json();
+              if(data && data.detail){ msg = data.detail; }
+            }catch(_){}
+            showAlert(msg, "error");
+          }else{
+            showAlert("Pagamento apagado com sucesso! A página será atualizada.", "success");
+            setTimeout(() => {
+              window.location.reload();
+            }, 900);
+          }
+        }catch(err){
+          console.error(err);
+          showAlert("Erro de comunicação com o servidor.", "error");
+        }finally{
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      });
+    });
+  }
+
+  wireDeleteButtons();
+</script>
+</body>
+</html>

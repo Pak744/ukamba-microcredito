@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <title>Gestão de Usuários — Ukamba Microcrédito</title>
+  <style>
+    body{
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    h1{
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    h2{
+      font-size: 18px;
+      margin-top: 24px;
+      margin-bottom: 8px;
+    }
+    a{
+      color: #0D47A1;
+      text-decoration: none;
+    }
+    a:hover{ text-decoration: underline; }
+
+    .container{
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px 24px 28px 24px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(15,23,42,0.08);
+      border: 1px solid #e5e7eb;
+    }
+
+    label{ display:block; font-size: 13px; margin-bottom: 4px; }
+    input, select{
+      font-family: inherit;
+      font-size: 14px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      min-width: 160px;
+    }
+    input:focus, select:focus{
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px rgba(37,99,235,0.25);
+    }
+
+    .form-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:flex-end;
+      margin-bottom:8px;
+    }
+    .form-group{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+
+    button{
+      cursor:pointer;
+      padding:6px 10px;
+      font-size:13px;
+      border-radius:6px;
+      border:1px solid #d1d5db;
+      background:#f9fafb;
+    }
+    button.primary{
+      background:#0D47A1;
+      color:#fff;
+      border-color:#0D47A1;
+    }
+    button.primary:hover{
+      background:#0b3b84;
+    }
+    button.danger{
+      background:#fee2e2;
+      border-color:#fecaca;
+      color:#b91c1c;
+    }
+
+    .alert-ok{
+      margin-top:8px;
+      padding:6px 10px;
+      border-radius:6px;
+      background:#ecfdf3;
+      color:#166534;
+      font-size:13px;
+      border:1px solid #bbf7d0;
+      display:inline-block;
+    }
+    .alert-err{
+      margin-top:8px;
+      padding:6px 10px;
+      border-radius:6px;
+      background:#fef2f2;
+      color:#b91c1c;
+      font-size:13px;
+      border:1px solid #fecaca;
+      display:inline-block;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:8px;
+      font-size:13px;
+    }
+    th,td{
+      border:1px solid #e5e7eb;
+      padding:6px 8px;
+      text-align:left;
+    }
+    th{
+      background:#f9fafb;
+      font-weight:600;
+    }
+    td form{
+      margin:0;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
+    .pill{
+      display:inline-block;
+      font-size:11px;
+      padding:2px 6px;
+      border-radius:999px;
+      background:#eff6ff;
+      color:#1d4ed8;
+    }
+    .pill.inactive{
+      background:#fee2e2;
+      color:#b91c1c;
+    }
+
+    .top-bar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    .top-bar a.back{
+      font-size:13px;
+    }
+
+    @media(max-width:640px){
+      body{ padding:12px; }
+      .container{ padding:16px; }
+      .form-row{ flex-direction:column; align-items:flex-start; }
+      table{ font-size:12px; }
+      th,td{ padding:5px 6px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <h1>Gestão de Usuários</h1>
+      <a href="/dashboard" class="back">&larr; Voltar ao dashboard</a>
+    </div>
+
+    {% if ok_msg %}
+      <div class="alert-ok">{{ ok_msg }}</div>
+    {% endif %}
+    {% if err_msg %}
+      <div class="alert-err">{{ err_msg }}</div>
+    {% endif %}
+
+    <h2>Criar utilizador</h2>
+    <form method="post" action="/admin/users">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input id="username" name="username" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required />
+        </div>
+        <div class="form-group">
+          <label for="role">Função (role)</label>
+          <select id="role" name="role">
+            {% for value,label in roles %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <button type="submit" class="primary">Criar</button>
+        </div>
+      </div>
+    </form>
+
+    <h2>Utilizadores existentes</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Ativo?</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.id }}</td>
+          <td>{{ u.username }}</td>
+          <td>{{ u.role.value }}</td>
+          <td>
+            {% if u.is_active %}
+              <span class="pill">Sim</span>
+            {% else %}
+              <span class="pill inactive">Não</span>
+            {% endif %}
+          </td>
+          <td>
+            <!-- Ativar / Desativar -->
+            <form method="post" action="/admin/users/{{ u.id }}/toggle">
+              <button type="submit">
+                {% if u.is_active %}Desativar{% else %}Ativar{% endif %}
+              </button>
+            </form>
+
+            <!-- Reset de senha -->
+            <form method="post" action="/admin/users/{{ u.id }}/reset-password">
+              <input
+                type="password"
+                name="new_password"
+                placeholder="Nova senha"
+              />
+              <button type="submit">Reset</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if users|length == 0 %}
+        <tr>
+          <td colspan="5">Ainda não há utilizadores registados.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

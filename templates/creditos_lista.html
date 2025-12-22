@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lista de Créditos</title>
+  <style>
+    :root{
+      --blue:#0D47A1;
+      --bg:#f6f7fb;
+      --card:#fff;
+      --text:#111827;
+      --muted:#6b7280;
+      --line:#eef2ff;
+      --danger:#dc2626;
+      --success:#16a34a;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    header{background:var(--blue);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+    header .title{font-size:20px;font-weight:700}
+    header a{color:#e0ecff;font-size:13px;text-decoration:none}
+    header a:hover{text-decoration:underline}
+    .wrap{max-width:1200px;margin:18px auto;padding:0 16px}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:16px;margin-bottom:14px}
+    h2{margin:0 0 6px 0;font-size:17px}
+    p{margin:0;font-size:13px;color:var(--muted)}
+    .top-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+    .top-row-right{display:flex;gap:8px;align-items:center}
+    .btn{border-radius:999px;border:1px solid var(--line);padding:6px 12px;font-size:13px;background:#fff;cursor:pointer}
+    .btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .btn-danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+    .btn-sm{padding:4px 10px;font-size:12px}
+    .btn:hover{filter:brightness(.97)}
+    .filters{display:flex;gap:10px;margin:10px 0 4px 0;flex-wrap:wrap}
+    .field{display:flex;flex-direction:column;font-size:12px;color:var(--muted)}
+    .field input,.field select{margin-top:3px;padding:7px 9px;border-radius:999px;border:1px solid var(--line);min-width:180px;font-size:13px}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:9px 10px;font-size:13px;border-bottom:1px solid var(--line);text-align:left}
+    th{color:var(--muted);font-weight:600;background:#f9fafb}
+    tr:hover td{background:#f5f7ff}
+    .pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600}
+    .pill-ativo{background:#dcfce7;color:#166534}
+    .pill-devedor{background:#fef3c7;color:#92400e}
+    .pill-concluido{background:#e5e7eb;color:#374151}
+    .actions{display:flex;gap:6px}
+    .muted{color:var(--muted);font-size:13px}
+    .stats{font-size:13px;color:var(--muted);margin-top:4px}
+    .stats button{margin-right:10px;border:none;background:#eef2ff;color:var(--muted);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer}
+    .stats button:hover{background:#e0e7ff}
+    a.nome-link{color:var(--blue);text-decoration:none}
+    a.nome-link:hover{text-decoration:underline}
+    @media(max-width:800px){
+      header{flex-direction:column;align-items:flex-start;gap:4px}
+      .top-row{flex-direction:column;align-items:flex-start}
+      table{font-size:12px}
+      th,td{padding:7px 6px}
+      .field input,.field select{min-width:140px}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="title">Lista de Créditos</div>
+  <a href="/dashboard">&larr; Voltar ao dashboard</a>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <div class="top-row">
+      <div>
+        <h2>Créditos registados</h2>
+        <p>Clique no <strong>nome</strong> para ver o detalhe completo do cliente.</p>
+        <div class="stats">
+          <button type="button" onclick="setFiltroEstado('todos')">
+            Total: {{ stats.total if stats and stats.total is not none else 0 }}
+          </button>
+          <button type="button" onclick="setFiltroEstado('Ativo')">
+            Ativos: {{ stats.ativos if stats and stats.ativos is not none else 0 }}
+          </button>
+          <button type="button" onclick="setFiltroEstado('Devedor')">
+            Devedores: {{ stats.devedores if stats and stats.devedores is not none else 0 }}
+          </button>
+          <button type="button" onclick="setFiltroEstado('Concluído')">
+            Concluídos: {{ stats.concluidos if stats and stats.concluidos is not none else 0 }}
+          </button>
+        </div>
+      </div>
+      <div class="top-row-right">
+        <button class="btn btn-primary" onclick="window.location.href='/docs'">Ver API (/docs)</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="field">
+        <label for="filtroBusca">Pesquisar</label>
+        <input id="filtroBusca" type="text" placeholder="Nome ou ID do crédito" oninput="aplicarFiltro()">
+      </div>
+      <div class="field">
+        <label for="filtroEstado">Filtrar por estado</label>
+        <select id="filtroEstado" onchange="aplicarFiltro()">
+          <option value="todos">Todos</option>
+          <option value="Ativo">Ativo</option>
+          <option value="Devedor">Devedor</option>
+          <option value="Concluído">Concluído</option>
+        </select>
+      </div>
+    </div>
+
+    <table id="tabelaCreditos">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Telefone</th>
+          <th>Valor solicitado</th>
+          <th>Pago até hoje</th>
+          <th>Saldo em aberto</th>
+          <th>Estado</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% if creditos and creditos|length > 0 %}
+        {% for c in creditos %}
+        <tr data-id="{{ c.id_credito }}"
+            data-nome="{{ c.nome | lower }}"
+            data-estado="{{ c.estado }}">
+          <td>#{{ c.id_credito }}</td>
+          <td>
+            <a href="/dashboard/creditos/{{ c.id_credito }}" class="nome-link">
+              {{ c.nome }}
+            </a>
+          </td>
+          <td>{{ c.telefone }}</td>
+          <td>{{ "{:,.2f}".format(c.valor_solicitado).replace(",", "X").replace(".", ",").replace("X", " ") }} Kz</td>
+          <td>{{ "{:,.2f}".format(c.valor_pago).replace(",", "X").replace(".", ",").replace("X", " ") }} Kz</td>
+          <td>{{ "{:,.2f}".format(c.saldo_em_aberto).replace(",", "X").replace(".", ",").replace("X", " ") }} Kz</td>
+          <td>
+            {% if c.estado == "Ativo" %}
+              <span class="pill pill-ativo">Ativo</span>
+            {% elif c.estado == "Devedor" %}
+              <span class="pill pill-devedor">Devedor</span>
+            {% elif c.estado == "Concluído" %}
+              <span class="pill pill-concluido">Concluído</span>
+            {% else %}
+              <span class="pill pill-concluido">{{ c.estado }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="actions">
+              <button class="btn btn-sm"
+                      onclick="window.location.href='/dashboard/creditos/{{ c.id_credito }}'">
+                Ver detalhe
+              </button>
+              <button class="btn btn-sm btn-danger"
+                      onclick="apagarCredito({{ c.id_credito }})">
+                Apagar
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="8" class="muted">Ainda não há créditos registados.</td></tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  function setFiltroEstado(estado){
+    const select = document.getElementById('filtroEstado');
+    if (!select) return;
+
+    if (estado === 'todos'){
+      select.value = 'todos';
+    } else if (estado === 'Ativo' || estado === 'Devedor' || estado === 'Concluído'){
+      select.value = estado;
+    }
+
+    aplicarFiltro();
+  }
+
+  function aplicarFiltro(){
+    const busca = document.getElementById('filtroBusca').value.toLowerCase().trim();
+    const estado = document.getElementById('filtroEstado').value;
+    const linhas = document.querySelectorAll('#tabelaCreditos tbody tr');
+
+    linhas.forEach(tr => {
+      const nome = (tr.getAttribute('data-nome') || '').toLowerCase();
+      const id = (tr.getAttribute('data-id') || '');
+      const est = tr.getAttribute('data-estado') || '';
+
+      let mostra = true;
+
+      if (busca){
+        mostra = nome.includes(busca) || id.includes(busca);
+      }
+      if (mostra && estado !== 'todos'){
+        mostra = (est === estado);
+      }
+
+      tr.style.display = mostra ? '' : 'none';
+    });
+  }
+
+  async function apagarCredito(id){
+    if (!confirm(`Tem certeza que deseja apagar o crédito #${id}?`)){
+      return;
+    }
+    try{
+      const resp = await fetch(`/creditos/${id}`, {method: 'DELETE'});
+      if (resp.ok){
+        alert('Crédito apagado com sucesso.');
+        window.location.reload();
+      } else {
+        const data = await resp.json().catch(() => ({}));
+        alert(data.detail || 'Não foi possível apagar. Verifique se o crédito tem pagamentos associados.');
+      }
+    }catch(e){
+      alert('Erro ao comunicar com o servidor.');
+    }
+  }
+</script>
+</body>
+</html>

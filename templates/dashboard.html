@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ukamba Microcrédito | Dashboard</title>
+  <style>
+    :root{
+      --bg:#f3f4f6;
+      --bg-alt:#e5edf9;
+      --card:#ffffff;
+      --card-soft:#f9fafb;
+      --text:#111827;
+      --muted:#6b7280;
+      --line:#e2e8f0;
+      --blue:#0D47A1;
+      --blue-accent:#1E88E5;
+      --blue-soft:#e3f2fd;
+      --danger:#e11d48;
+      --success:#15803d;
+      --shadow-soft:0 12px 30px rgba(15,23,42,0.08);
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      margin:0;
+      background:radial-gradient(circle at top,#e0ebff 0,#f3f4f6 40%,#f3f4f6 100%);
+      color:var(--text);
+    }
+
+    header{
+      background:linear-gradient(90deg,var(--blue),#1565c0);
+      color:#fff;
+      padding:16px 24px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      box-shadow:0 4px 12px rgba(15,23,42,0.35);
+      position:sticky;
+      top:0;
+      z-index:20;
+    }
+    header-title{
+      display:block;
+      font-size:18px;
+      font-weight:700;
+      letter-spacing:.01em;
+    }
+    .header-sub{
+      font-size:12px;
+      opacity:.9;
+      margin-top:2px;
+    }
+    .muted{
+      color:var(--muted);
+      font-size:12px;
+    }
+    header #geradoEm{
+      font-size:12px;
+      opacity:.95;
+    }
+
+    .wrap{
+      max-width:1240px;
+      margin:20px auto 28px auto;
+      padding:0 18px;
+    }
+
+    .dashboard-intro{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .dashboard-intro-title{
+      font-size:20px;
+      font-weight:700;
+      color:#0f172a;
+    }
+    .dashboard-intro-sub{
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .card{
+      background:var(--card);
+      border-radius:16px;
+      padding:16px 18px;
+      box-shadow:var(--shadow-soft);
+      border:1px solid rgba(148,163,184,0.28);
+    }
+
+    .card--toolbar{
+      margin-bottom:14px;
+    }
+
+    .section-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+    .section-header-title{
+      font-size:14px;
+      font-weight:700;
+      color:#0f172a;
+    }
+    .section-header-sub{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .grid-cards{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+      margin-top:14px;
+    }
+    .card-kpi{
+      position:relative;
+      overflow:hidden;
+      padding:14px 16px;
+      border-radius:16px;
+      background:linear-gradient(145deg,#ffffff,#f5f7ff);
+      border:1px solid rgba(148,163,184,0.35);
+      box-shadow:0 10px 25px rgba(15,23,42,0.06);
+    }
+    .card-kpi::before{
+      content:"";
+      position:absolute;
+      inset:auto -40px -40px auto;
+      width:100px;
+      height:100px;
+      border-radius:999px;
+      background:radial-gradient(circle at center,rgba(37,99,235,0.18),transparent 60%);
+      opacity:.8;
+      pointer-events:none;
+    }
+    .card-title{
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:4px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+    .card-value{
+      font-size:22px;
+      font-weight:700;
+      color:#0f172a;
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns:2.1fr 1.4fr;
+      gap:14px;
+      margin-top:14px;
+    }
+    .row-3{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+      margin-top:14px;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+    }
+    th,td{
+      padding:8px 10px;
+      border-bottom:1px solid var(--line);
+      text-align:left;
+      font-size:13px;
+    }
+    th{
+      color:#4b5563;
+      font-weight:600;
+      background:var(--card-soft);
+    }
+    tr:hover td{
+      background:#f9fafb;
+    }
+    .table-title{
+      font-weight:700;
+      margin-bottom:8px;
+      font-size:14px;
+      color:#0f172a;
+    }
+
+    .toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin:4px 0 0 0;
+      align-items:center;
+    }
+    .btn{
+      border:none;
+      outline:none;
+      cursor:pointer;
+      font-size:12px;
+      padding:7px 12px;
+      border-radius:9999px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      text-decoration:none;
+      white-space:nowrap;
+      transition:all .15s ease-out;
+    }
+    .btn-primary{
+      background:linear-gradient(135deg,var(--blue),var(--blue-accent));
+      color:#fff;
+      box-shadow:0 8px 18px rgba(37,99,235,0.35);
+    }
+    .btn-primary:hover{
+      transform:translateY(-1px);
+      box-shadow:0 10px 22px rgba(37,99,235,0.45);
+    }
+    .btn-secondary{
+      background:#ffffff;
+      color:var(--blue);
+      border:1px solid var(--blue-soft);
+    }
+    .btn-secondary:hover{
+      background:var(--blue-soft);
+    }
+
+    /* 🔴 Botão de SAIR */
+    .btn-danger{
+      background:#dc2626;
+      color:#ffffff;
+      border:1px solid #b91c1c;
+      box-shadow:0 8px 18px rgba(220,38,38,0.35);
+    }
+    .btn-danger:hover{
+      background:#b91c1c;
+    }
+
+    .btn-small{
+      font-size:11px;
+      padding:5px 9px;
+    }
+
+    .form-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+      margin-top:10px;
+    }
+    .form-group{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      font-size:12px;
+    }
+    .form-group label{
+      font-weight:600;
+      color:#374151;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea{
+      font-family:inherit;
+      font-size:13px;
+      padding:7px 9px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      outline:none;
+      background:#ffffff;
+      transition:border-color .12s ease,box-shadow .12s ease,background .12s ease;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus{
+      border-color:var(--blue-accent);
+      box-shadow:0 0 0 1px rgba(37,99,235,0.20);
+      background:#f9fbff;
+    }
+
+    .form-actions{
+      margin-top:12px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .msg{
+      font-size:12px;
+      margin-top:4px;
+    }
+    .msg-ok{color:var(--success);}
+    .msg-err{color:var(--danger);}
+
+    @media(max-width:1024px){
+      .grid-cards{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .row{grid-template-columns:1fr;}
+      .row-3{grid-template-columns:1fr;}
+      .toolbar{flex-direction:row;align-items:flex-start}
+    }
+    @media(max-width:640px){
+      header{
+        padding:12px 16px;
+        flex-direction:column;
+        align-items:flex-start;
+        gap:4px;
+      }
+      .wrap{padding:0 12px;}
+      .grid-cards{grid-template-columns:1fr;}
+      .dashboard-intro{flex-direction:column;align-items:flex-start;}
+      .form-grid{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <header-title>Ukamba Microcrédito — Dashboard</header-title>
+      <div class="header-sub">Visão geral financeira e operacional dos créditos</div>
+    </div>
+    <div id="geradoEm">Carregando...</div>
+  </header>
+
+  <div class="wrap">
+    <div class="dashboard-intro">
+      <div>
+        <div class="dashboard-intro-title">Painel geral</div>
+        <div class="dashboard-intro-sub">
+          Acompanhe concessões, recebimentos, devedores e desempenho da equipa em tempo real.
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de ações / exportações / relatórios / gestão de usuários -->
+    <div class="card card--toolbar">
+      <div class="section-header">
+        <div>
+          <div class="section-header-title">Exportações &amp; Relatórios</div>
+          <div class="section-header-sub">
+            Exporte dados ou aceda a ferramentas administrativas.
+          </div>
+        </div>
+        <div class="toolbar">
+          <a class="btn btn-primary" href="/relatorios/exportar/creditos.csv" target="_blank">Créditos CSV</a>
+          <a class="btn btn-primary" href="/relatorios/exportar/pagamentos.csv" target="_blank">Pagamentos CSV</a>
+          <button class="btn btn-secondary" type="button" onclick="abrirMensalPadrao()">
+            Relatório mensal PDF
+          </button>
+          <!-- Gestão de usuários: começa escondido, só admin vê -->
+          <a id="btnGestaoUsuarios" class="btn btn-secondary" href="/admin/users" style="display:none;">
+            Gestão de usuários
+          </a>
+          <!-- Botão de saída da plataforma -->
+          <a class="btn btn-danger" href="/logout">
+            Sair
+          </a>
+        </div>
+      </div>
+
+      <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+        <div class="form-group" style="max-width:100px;">
+          <label for="anoMensal">Ano</label>
+          <input id="anoMensal" type="number" min="2024" max="2100" />
+        </div>
+        <div class="form-group" style="max-width:130px;">
+          <label for="mesMensal">Mês</label>
+          <select id="mesMensal">
+            <option value="">Atual</option>
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+            <option value="3">Março</option><option value="4">Abril</option>
+            <option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option>
+            <option value="9">Setembro</option><option value="10">Outubro</option>
+            <option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1;min-width:180px;">
+          <label for="respMensal">Responsável / Atendente (opcional)</label>
+          <input id="respMensal" type="text" placeholder="Nome a aparecer no PDF" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Cadastro rápido de crédito -->
+    <div id="cardNovoCredito" class="card" style="margin-bottom:14px;">
+      <div class="section-header">
+        <div>
+          <div class="section-header-title">📋 Novo Crédito (cadastro rápido)</div>
+          <div class="section-header-sub">
+            Registe um novo crédito para o colaborador sem sair do painel principal.
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <span class="muted">API: POST /creditos</span>
+          <button type="button" class="btn btn-secondary btn-small" onclick="irParaListaCreditos()">
+            Ver lista de créditos
+          </button>
+        </div>
+      </div>
+
+      <form id="novoCreditoForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="ncNome">Nome</label>
+            <input id="ncNome" type="text" required placeholder="Nome completo" />
+          </div>
+          <div class="form-group">
+            <label for="ncTelefone">Telefone</label>
+            <input id="ncTelefone" type="text" required placeholder="923..." />
+          </div>
+          <div class="form-group">
+            <label for="ncProfissao">Profissão / Função</label>
+            <input id="ncProfissao" type="text" required placeholder="Ex: Técnico Administrativo" />
+          </div>
+          <div class="form-group">
+            <label for="ncSalario">Salário mensal (Kz)</label>
+            <input id="ncSalario" type="number" min="0" step="0.01" required />
+          </div>
+          <div class="form-group">
+            <label for="ncValor">Valor solicitado (Kz)</label>
+            <input id="ncValor" type="number" min="0" step="0.01" required />
+          </div>
+          <div class="form-group">
+            <label for="ncDuracao">Duração (meses)</label>
+            <select id="ncDuracao" required>
+              <option value="">Selecione</option>
+              <option value="1">1 mês</option>
+              <option value="2">2 meses</option>
+              <option value="3">3 meses</option>
+              <option value="4">4 meses</option>
+              <option value="5">5 meses</option>
+              <option value="6">6 meses</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ncDataInicio">Data de início</label>
+            <input id="ncDataInicio" type="date" required />
+          </div>
+          <div class="form-group">
+            <label for="ncComentario">Comentário (opcional)</label>
+            <textarea id="ncComentario" rows="2" placeholder="Finalidade do crédito, observações, etc."></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <span id="novoCreditoMsg" class="msg"></span>
+          <button type="submit" class="btn btn-primary">Gravar crédito</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="grid-cards" id="cards"></div>
+
+    <div class="row">
+      <div class="card">
+        <div class="table-title">Pagamentos recentes</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Crédito</th>
+              <th>Valor</th>
+              <th>Forma</th>
+              <th>Atendente</th>
+            </tr>
+          </thead>
+          <tbody id="pagamentosRecentes"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="table-title">Top devedores</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Saldo em aberto</th>
+            </tr>
+          </thead>
+          <tbody id="topDevedores"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="row-3">
+      <div class="card">
+        <div class="table-title">Totais por forma de pagamento</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Forma</th>
+              <th>Total pago</th>
+            </tr>
+          </thead>
+          <tbody id="totaisForma"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="table-title">Totais por atendente</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Atendente</th>
+              <th>Total recebido</th>
+            </tr>
+          </thead>
+          <tbody id="totaisAtendente"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="table-title">Pagamentos por mês</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th>Total pago</th>
+            </tr>
+          </thead>
+          <tbody id="pagamentosMes"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const kz = (n) => {
+      const v = Number(n || 0);
+      return v.toLocaleString('pt-PT', {
+        minimumFractionDigits:2,
+        maximumFractionDigits:2
+      }) + " Kz";
+    };
+
+    function abrirMensalPadrao(){
+      const hoje = new Date();
+      let ano = document.getElementById('anoMensal').value;
+      let mes  = document.getElementById('mesMensal').value;
+      const resp = document.getElementById('respMensal').value;
+
+      if(!ano){ ano = hoje.getFullYear(); }
+      if(!mes){ mes = hoje.getMonth() + 1; }
+
+      let url = `/relatorios/mensal.pdf?ano=${ano}&mes=${mes}`;
+      if(resp){
+        url += `&responsavel=${encodeURIComponent(resp)}`;
+      }
+      window.open(url, '_blank');
+    }
+
+    function irParaListaCreditos(){
+      window.location.href = "/dashboard/creditos";
+    }
+
+    async function loadDashboard(){
+      const res = await fetch('/dashboard/data');
+      if(!res.ok){
+        const text = await res.text();
+        document.getElementById('geradoEm').textContent =
+          "Erro ao carregar dashboard: " + text;
+        return;
+      }
+      const data = await res.json();
+
+      document.getElementById('geradoEm').textContent =
+        "Gerado em: " + (data.gerado_em || "");
+
+      const c = data.cards || {};
+
+      const items = [
+        ["Total concedido", kz(c.total_concedido)],
+        ["Total a receber", kz(c.total_a_receber)],
+        ["Total pago", kz(c.total_pago)],
+        ["Total em aberto", kz(c.total_em_aberto)],
+        ["Créditos", c.total_creditos ?? 0],
+        ["Ativos", c.ativos ?? 0],
+        ["Devedores", c.devedores ?? 0],
+        ["Concluídos", c.concluidos ?? 0],
+      ];
+      const cards = document.getElementById('cards');
+      cards.innerHTML = items.map(([k,v]) => `
+        <div class="card-kpi">
+          <div class="card-title">${k}</div>
+          <div class="card-value">${v}</div>
+        </div>
+      `).join("");
+
+      const pr = data.pagamentos_recentes || [];
+      document.getElementById('pagamentosRecentes').innerHTML =
+        pr.length
+          ? pr.map(p => `
+              <tr>
+                <td>${p.data ?? ""}</td>
+                <td>#${p.credito ?? ""}</td>
+                <td>${kz(p.valor)}</td>
+                <td>${p.forma ?? ""}</td>
+                <td>${p.atendente ?? "-"}</td>
+              </tr>
+            `).join("")
+          : `<tr><td colspan="5" class="muted">Sem pagamentos recentes.</td></tr>`;
+
+      const td = data.top_devedores || [];
+      document.getElementById('topDevedores').innerHTML =
+        td.length
+          ? td.map(x => `
+              <tr>
+                <td>${x.nome ?? ""}</td>
+                <td>${kz(x.saldo)}</td>
+              </tr>
+            `).join("")
+          : `<tr><td colspan="2" class="muted">Sem devedores.</td></tr>`;
+
+      const tf = data.totais_por_forma_pagamento || [];
+      document.getElementById('totaisForma').innerHTML =
+        tf.length
+          ? tf.map(x => `
+              <tr>
+                <td>${x.forma ?? ""}</td>
+                <td>${kz(x.total)}</td>
+              </tr>
+            `).join("")
+          : `<tr><td colspan="2" class="muted">Sem dados.</td></tr>`;
+
+      const ta = data.totais_por_atendente || [];
+      document.getElementById('totaisAtendente').innerHTML =
+        ta.length
+          ? ta.map(x => `
+              <tr>
+                <td>${x.atendente ?? ""}</td>
+                <td>${kz(x.total)}</td>
+              </tr>
+            `).join("")
+          : `<tr><td colspan="2" class="muted">Sem dados.</td></tr>`;
+
+      const pm = data.pagamentos_por_mes || [];
+      document.getElementById('pagamentosMes').innerHTML =
+        pm.length
+          ? pm.map(x => `
+              <tr>
+                <td>${x.mes ?? ""}</td>
+                <td>${kz(x.total)}</td>
+              </tr>
+            `).join("")
+          : `<tr><td colspan="2" class="muted">Sem dados.</td></tr>`;
+    }
+
+    async function initNovoCreditoForm(){
+      const form = document.getElementById('novoCreditoForm');
+      const msgEl = document.getElementById('novoCreditoMsg');
+      if(!form) return;
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        msgEl.textContent = "";
+        msgEl.className = "msg";
+
+        const payload = {
+          nome:          document.getElementById('ncNome').value.trim(),
+          telefone:      document.getElementById('ncTelefone').value.trim(),
+          profissao:     document.getElementById('ncProfissao').value.trim(),
+          salario_mensal: Number(document.getElementById('ncSalario').value || 0),
+          valor_solicitado: Number(document.getElementById('ncValor').value || 0),
+          duracao_meses: Number(document.getElementById('ncDuracao').value || 0),
+          data_inicio:   document.getElementById('ncDataInicio').value,
+          comentario:    document.getElementById('ncComentario').value || null,
+        };
+
+        try {
+          const token = localStorage.getItem("token");
+          const headers = {
+            'Content-Type': 'application/json'
+          };
+          if (token) {
+            headers['Authorization'] = 'Bearer ' + token;
+          }
+
+          const res = await fetch('/creditos', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload),
+          });
+
+          if(!res.ok){
+            let detail = "";
+            try{
+              const err = await res.json();
+              detail = err.detail || JSON.stringify(err);
+            }catch(_){ detail = await res.text(); }
+
+            msgEl.textContent = "Erro ao gravar crédito: " + detail;
+            msgEl.className = "msg msg-err";
+            return;
+          }
+
+          const data = await res.json();
+          msgEl.textContent = "Crédito #" + data.id_credito + " criado com sucesso!";
+          msgEl.className = "msg msg-ok";
+
+          form.reset();
+          await loadDashboard();
+        } catch (err){
+          msgEl.textContent = "Erro inesperado: " + err;
+          msgEl.className = "msg msg-err";
+        }
+      });
+    }
+
+    // 🔐 Verificar papel do utilizador:
+    // - mostrar Gestão de usuários só para admin
+    // - esconder "Novo Crédito" se for leitor
+    async function verificarPermissao(){
+      try{
+        const token = localStorage.getItem("token");
+        if(!token){
+          // sem token, não tenta chamar whoami
+          return;
+        }
+
+        const res = await fetch("/admin/whoami", {
+          headers:{
+            "Authorization": "Bearer " + token
+          }
+        });
+
+        if(!res.ok){
+          return;
+        }
+
+        const data = await res.json();
+        const role = data.role; // "admin", "gestor" ou "leitor"
+
+        // ADMIN → vê Gestão de usuários
+        if(role === "admin"){
+          const btn = document.getElementById("btnGestaoUsuarios");
+          if(btn){
+            btn.style.display = "inline-flex";
+          }
+        }
+
+        // LEITOR → não vê o card de Novo Crédito
+        if(role === "leitor"){
+          const cardNovo = document.getElementById("cardNovoCredito");
+          if(cardNovo){
+            cardNovo.style.display = "none";
+          }
+        }
+
+      }catch(e){
+        console.log("Erro ao verificar permissões", e);
+      }
+    }
+
+    loadDashboard().catch(err => {
+      document.getElementById('geradoEm').textContent =
+        "Erro ao carregar dashboard: " + err;
+    });
+    initNovoCreditoForm();
+    verificarPermissao();
+  </script>
+</body>
+</html>
