@@ -3,10 +3,11 @@ from fastapi import FastAPI, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from fastapi.responses import RedirectResponse
+from fastapi import APIRouter
 
 from app.db import Base, engine, SessionLocal
 from app.deps import get_db
-from app.db_models import UserDB
+from app.db_models import UserDB, UserRole
 
 from app.routes import (
     creditos,
@@ -44,7 +45,11 @@ def create_default_admin():
         if not admin:
             admin = UserDB(
                 username="alberto_admin",
-                password=get_password_hash("Ukamba123")
+                full_name="Administrador Geral",
+                email=None,
+                hashed_password=get_password_hash("Ukamba123"),
+                role=UserRole.ADMIN,
+                is_active=True,
             )
             db.add(admin)
             db.commit()
@@ -69,10 +74,8 @@ async def login(
     return await login_for_access_token(form_data, db)
 
 # ==============================
-# ROTA TEMPORÁRIA PARA RESET DO ADMIN
+# ROTA PARA RESET DO ADMIN
 # ==============================
-from fastapi import APIRouter
-
 reset_router = APIRouter()
 
 @reset_router.post("/reset-admin-password", tags=["Admin"])
@@ -81,15 +84,30 @@ def reset_admin_password(db: Session = Depends(get_db)):
     Reseta ou cria o usuário 'alberto_admin' com senha Ukamba123
     """
     user = db.query(UserDB).filter(UserDB.username == "alberto_admin").first()
+
     if not user:
-        user = UserDB(username="alberto_admin", password=get_password_hash("Ukamba123"))
+        user = UserDB(
+            username="alberto_admin",
+            full_name="Administrador Geral",
+            email=None,
+            hashed_password=get_password_hash("Ukamba123"),
+            role=UserRole.ADMIN,
+            is_active=True,
+        )
         db.add(user)
         db.commit()
-        return {"status": "ok", "mensagem": "Usuário alberto_admin criado com senha Ukamba123"}
-    
-    user.password = get_password_hash("Ukamba123")
+        return {
+            "status": "ok",
+            "mensagem": "Usuário alberto_admin criado com senha Ukamba123"
+        }
+
+    user.hashed_password = get_password_hash("Ukamba123")
     db.commit()
-    return {"status": "ok", "mensagem": "Senha do alberto_admin resetada para Ukamba123"}
+
+    return {
+        "status": "ok",
+        "mensagem": "Senha do alberto_admin resetada para Ukamba123"
+    }
 
 app.include_router(reset_router)
 
