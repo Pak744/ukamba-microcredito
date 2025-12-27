@@ -4,10 +4,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from fastapi.responses import RedirectResponse
 
-from app.db import Base, engine
+from app.db import Base, engine, SessionLocal
 from app.deps import get_db
-
-import app.db_models  # garante que models carregam (inclui UserDB)
+from app.db_models import UserDB
 
 from app.routes import (
     creditos,
@@ -17,21 +16,51 @@ from app.routes import (
     dashboard,
     admin_users,
     session,
-    login_page,   # ✅ nova rota da página de login
+    login_page,
 )
-from app.auth import get_login_route
 
-# Cria as tabelas (inclui a tabela "users")
+from app.auth import get_login_route, get_password_hash
+
+# ==============================
+# CRIA TABELAS
+# ==============================
 Base.metadata.create_all(bind=engine)
 
+# ==============================
+# FASTAPI APP
+# ==============================
 app = FastAPI(title="Ukamba Microcrédito")
 
 # ==============================
-# ROTA DE LOGIN (/token) - API
+# CRIA ADMIN PADRÃO (SE NÃO EXISTIR)
 # ==============================
+def create_default_admin():
+    db = SessionLocal()
+    try:
+        admin = db.query(UserDB).filter(
+            UserDB.username == "alberto_admin"
+        ).first()
 
+        if not admin:
+            admin = UserDB(
+                username="alberto_admin",
+                password=get_password_hash("Ukamba123")
+            )
+            db.add(admin)
+            db.commit()
+            print("✅ Admin alberto_admin criado com sucesso")
+        else:
+            print("ℹ️ Admin já existe, nada a fazer")
+    finally:
+        db.close()
+
+# executa uma vez no startup
+create_default_admin()
+
+# ==============================
+# ROTA DE LOGIN (/token)
+# ==============================
 login_for_access_token = get_login_route()
-
 
 @app.post("/token", tags=["Autenticação"])
 async def login(
@@ -41,39 +70,30 @@ async def login(
     """
     Endpoint de login.
     Usa username + password e devolve um token JWT.
-    (Usado pela tela de login HTML e pelo /docs.)
     """
     return await login_for_access_token(form_data, db)
-
 
 # ==============================
 # INCLUIR ROUTERS
 # ==============================
-
 app.include_router(creditos.router, prefix="/creditos", tags=["Créditos"])
 app.include_router(pagamentos.router, prefix="/pagamentos", tags=["Pagamentos"])
 app.include_router(relatorios.router, prefix="/relatorios", tags=["Relatórios"])
 app.include_router(atendentes.router, prefix="/atendentes", tags=["Atendentes"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 
-# admin_users já tem prefix="/admin" lá dentro -> fica /admin/users
+# admin_users já tem prefix="/admin"
 app.include_router(admin_users.router)
 
-# rota de logout /logout
+# logout
 app.include_router(session.router)
 
-# rota da página de login /login
+# página de login
 app.include_router(login_page.router)
 
-
 # ==============================
-# ROTA RAIZ -> redireciona para /login
+# ROTA RAIZ -> /login
 # ==============================
-
 @app.get("/")
 def home():
-    """
-    Quando alguém entra pela primeira vez na plataforma (raiz /),
-    redirecionamos para a tela de login bonita.
-    """
     return RedirectResponse(url="/login", status_code=307)
