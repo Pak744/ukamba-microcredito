@@ -1,15 +1,14 @@
-from fastapi import APIRouter, HTTPException, Body, Depends, Query
+from fastapi import APIRouter, HTTPException, Body, Depends
 from sqlalchemy.orm import Session
 from datetime import date, datetime
 
 from app.db import SessionLocal
-from app.db_models import PagamentoDB, CreditoDB, AtendenteDB
+from app.db_models import PagamentoDB, CreditoDB
 from app.models.schemas import PagamentoCreate, PagamentoUpdate, PagamentoOut
 from app.services.juros import calcular_estado
 from app.services.pdf import gerar_comprovativo_pagamento_pdf
-
+from app.auth import get_current_active_user
 from app import db_models
-from app.auth import admin_only, admin_ou_gestor, get_current_active_user
 
 router = APIRouter()
 
@@ -29,8 +28,6 @@ def get_db():
 # Helpers
 # =========================
 def _pagamento_to_dict(p: PagamentoDB) -> dict:
-    atendente_nome = p.atendente.nome if p.atendente else None
-
     return {
         "id_pagamento": p.id_pagamento,
         "nr_comprovativo": p.nr_comprovativo,
@@ -41,7 +38,7 @@ def _pagamento_to_dict(p: PagamentoDB) -> dict:
         "observacao": p.observacao,
         "emitido_em": p.emitido_em,
         "id_atendente": p.id_atendente,
-        "atendente_nome": atendente_nome,
+        "atendente_nome": p.atendente.nome if p.atendente else None,
     }
 
 
@@ -61,6 +58,11 @@ def _recalcular_credito(credito: CreditoDB):
     )
 
 
+def _check_role(user: db_models.UserDB, roles: list[str]):
+    if user.role not in roles:
+        raise HTTPException(status_code=403, detail="Sem permissão para esta ação")
+
+
 # =========================
 # ROTAS
 # =========================
@@ -73,8 +75,10 @@ def _recalcular_credito(credito: CreditoDB):
 def registrar_pagamento(
     payload: PagamentoCreate = Body(...),
     db: Session = Depends(get_db),
-    current_user: db_models.UserDB = Depends(admin_ou_gestor),
+    current_user: db_models.UserDB = Depends(get_current_active_user),
 ):
+    _check_role(current_user, ["admin", "gestor"])
+
     credito = db.query(CreditoDB).filter(
         CreditoDB.id_credito == payload.id_credito
     ).first()
@@ -97,7 +101,7 @@ def registrar_pagamento(
         valor_pago_no_dia=float(payload.valor_pago_no_dia),
         forma_pagamento=payload.forma_pagamento,
         observacao=payload.observacao,
-        id_atendente=payload.id_atendente,
+        id_atendente=current_user.id_user,
         emitido_em=datetime.utcnow(),
     )
 
@@ -111,47 +115,6 @@ def registrar_pagamento(
     return _pagamento_to_dict(pagamento)
 
 
-@router.get(
-    "",
-    response_model=list[PagamentoOut],
-    summary="Listar Pagamentos",
-)
-def listar_pagamentos(
-    db: Session = Depends(get_db),
-    current_user: db_models.UserDB = Depends(get_current_active_user),
-):
-    pagamentos = db.query(PagamentoDB).order_by(
-        PagamentoDB.id_pagamento.desc()
-    ).all()
-    return [_pagamento_to_dict(p) for p in pagamentos]
-
-
-@router.patch(
-    "/{id_pagamento}",
-    response_model=PagamentoOut,
-    summary="Atualizar Pagamento",
-)
-def atualizar_pagamento(
-    id_pagamento: int,
-    payload: PagamentoUpdate,
-    db: Session = Depends(get_db),
-    current_user: db_models.UserDB = Depends(admin_ou_gestor),
-):
-    pagamento = db.query(PagamentoDB).filter(
-        PagamentoDB.id_pagamento == id_pagamento
-    ).first()
-    if not pagamento:
-        raise HTTPException(status_code=404, detail="Pagamento não encontrado")
-
-    data = payload.model_dump(exclude_unset=True)
-    for k, v in data.items():
-        setattr(pagamento, k, v)
-
-    db.commit()
-    db.refresh(pagamento)
-    return _pagamento_to_dict(pagamento)
-
-
 @router.delete(
     "/{id_pagamento}",
     summary="Apagar Pagamento (ADMIN)",
@@ -159,13 +122,25 @@ def atualizar_pagamento(
 def apagar_pagamento(
     id_pagamento: int,
     db: Session = Depends(get_db),
-    current_user: db_models.UserDB = Depends(admin_only),
+    current_user: db_models.UserDB = Depends(get_current_active_user),
 ):
+    _check_role(current_user, ["admin"])
+
     pagamento = db.query(PagamentoDB).filter(
         PagamentoDB.id_pagamento == id_pagamento
     ).first()
     if not pagamento:
         raise HTTPException(status_code=404, detail="Pagamento não encontrado")
+
+    credito = db.query(CreditoDB).filter(
+        CreditoDB.id_credito == pagamento.id_credito
+    ).first()
+
+    credito.valor_pago -= float(pagamento.valor_pago_no_dia)
+    if credito.valor_pago < 0:
+        credito.valor_pago = 0
+
+    _recalcular_credito(credito)
 
     db.delete(pagamento)
     db.commit()
@@ -202,5 +177,5 @@ def baixar_comprovativo(
             "saldo_em_aberto": credito.saldo_em_aberto,
             "valor_total_reembolsar": credito.valor_total_reembolsar,
         },
-        responsavel=None,
+        responsavel=current_user.username,
     )
