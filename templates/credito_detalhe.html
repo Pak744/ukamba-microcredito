@@ -465,12 +465,16 @@
       };
 
       try{
-        const resp = await fetch('/pagamentos', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
-        });
+        const token = localStorage.getItem('access_token');
 
+const resp = await fetch('/pagamentos', {
+  method:'POST',
+  headers:{
+    'Content-Type':'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify(payload)
+});
         if(!resp.ok){
           let msg = "Falha ao gravar pagamento.";
           try{
