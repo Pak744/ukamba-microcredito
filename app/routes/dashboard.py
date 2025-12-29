@@ -1,4 +1,7 @@
 # app/routes/dashboard.py
+
+from datetime import date
+
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -6,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from app.db import SessionLocal
 from app.db_models import CreditoDB, PagamentoDB
 from app.services.dashboard_service import dashboard_data
+from app.services.juros import calcular_estado
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -16,46 +20,22 @@ templates = Jinja2Templates(directory="templates")
 # ==========================
 @router.get("", response_class=HTMLResponse, summary="Página do Dashboard (HTML)")
 def dashboard_page(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    data = dashboard_data()
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "data": data,
+        },
+    )
 
 
 @router.get("/data", summary="Dados do Dashboard (JSON)")
 def dashboard_json():
     """
-    Mesmo que dashboard_data dê erro,
-    nunca devolvemos Internal Server Error.
+    Endpoint JSON, caso queira consumir via JS no futuro.
     """
-    try:
-        data = dashboard_data()
-
-        if not isinstance(data, dict):
-            return {
-                "erro": "dashboard_data não retornou dict",
-                "cards": {},
-                "pagamentos_recentes": [],
-                "top_devedores": [],
-                "totais_por_forma_pagamento": [],
-                "totais_por_atendente": [],
-                "pagamentos_por_mes": [],
-                "proximos_vencimentos": [],
-                "creditos_mes": [],
-                "gerado_em": "",
-            }
-
-        return data
-    except Exception as e:
-        return {
-            "erro": f"falha na rota /dashboard/data: {e}",
-            "cards": {},
-            "pagamentos_recentes": [],
-            "top_devedores": [],
-            "totais_por_forma_pagamento": [],
-            "totais_por_atendente": [],
-            "pagamentos_por_mes": [],
-            "proximos_vencimentos": [],
-            "creditos_mes": [],
-            "gerado_em": "",
-        }
+    return dashboard_data()
 
 
 # ==========================
@@ -67,10 +47,6 @@ def dashboard_json():
     summary="Lista completa de créditos",
 )
 def dashboard_creditos_page(request: Request):
-    """
-    Tela separada para listar todos os créditos.
-    URL: /dashboard/creditos
-    """
     db = SessionLocal()
     try:
         creditos_db = (
@@ -135,12 +111,31 @@ def dashboard_credito_detalhe(id_credito: int, request: Request):
         if not credito:
             raise HTTPException(status_code=404, detail="Crédito não encontrado")
 
+        # Pagamentos deste crédito
         pagamentos_db = (
             db.query(PagamentoDB)
             .filter(PagamentoDB.id_credito == id_credito)
-            .order_by(PagamentoDB.data_pagamento.desc())
+            .order_by(
+                PagamentoDB.data_pagamento.desc(),
+                PagamentoDB.id_pagamento.desc(),
+            )
             .all()
         )
+
+        # Recalcula valor_pago e saldo_em_aberto com base nos pagamentos
+        total_pago = sum(float(p.valor_pago_no_dia or 0) for p in pagamentos_db)
+        total_reembolsar = float(credito.valor_total_reembolsar or 0)
+        saldo_em_aberto = max(0.0, total_reembolsar - total_pago)
+
+        credito.valor_pago = total_pago
+        credito.saldo_em_aberto = saldo_em_aberto
+        credito.estado = calcular_estado(
+            credito.data_fim,
+            saldo_em_aberto,
+            hoje=date.today(),
+        )
+        db.commit()
+        db.refresh(credito)
 
         credito_dict = {
             "id_credito": credito.id_credito,

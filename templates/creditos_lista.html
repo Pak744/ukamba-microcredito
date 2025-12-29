@@ -210,8 +210,23 @@
     if (!confirm(`Tem certeza que deseja apagar o crédito #${id}?`)){
       return;
     }
+
     try{
-      const resp = await fetch(`/creditos/${id}`, {method: 'DELETE'});
+      // 🔑 Usa o token gravado no login (login.html usa localStorage.setItem("token", ...)
+      const token = localStorage.getItem("token");
+      if (!token){
+        alert("Sessão expirada. Faça login novamente.");
+        window.location.href = "/login";
+        return;
+      }
+
+      const resp = await fetch(`/creditos/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
       if (resp.ok){
         alert('Crédito apagado com sucesso.');
         window.location.reload();

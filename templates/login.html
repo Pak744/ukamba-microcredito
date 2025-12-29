@@ -129,6 +129,7 @@ button:hover{
 // limpa qualquer token antigo quando abre a tela de login
 try {
   localStorage.removeItem("token");
+  localStorage.removeItem("access_token");
 } catch (e) {
   console.log("Não foi possível limpar token anterior", e);
 }
@@ -159,9 +160,10 @@ async function login(){
 
     const data = await res.json();
 
-    // ✅ guarda o token JWT para usar no dashboard (/admin/whoami, etc.)
+    // ✅ guarda o token JWT em DOIS nomes, para todos os ecrãs usarem
     try {
       localStorage.setItem("token", data.access_token);
+      localStorage.setItem("access_token", data.access_token);
     } catch (e) {
       console.log("Erro ao guardar token no localStorage", e);
     }

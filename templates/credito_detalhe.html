@@ -465,16 +465,17 @@
       };
 
       try{
-        const token = localStorage.getItem('access_token');
+        // 🔑 usa o token guardado no login
+        const token = localStorage.getItem('token');
 
-const resp = await fetch('/pagamentos', {
-  method:'POST',
-  headers:{
-    'Content-Type':'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify(payload)
-});
+        const resp = await fetch('/pagamentos', {
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
         if(!resp.ok){
           let msg = "Falha ao gravar pagamento.";
           try{
@@ -515,8 +516,14 @@ const resp = await fetch('/pagamentos', {
         btn.textContent = "Apagando...";
 
         try{
+          // 🔑 usa o mesmo token do login
+          const token = localStorage.getItem('token');
+
           const resp = await fetch(`/pagamentos/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers:{
+              'Authorization': `Bearer ${token}`
+            }
           });
 
           if(!resp.ok){

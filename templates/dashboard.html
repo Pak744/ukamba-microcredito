@@ -231,7 +231,6 @@
       background:var(--blue-soft);
     }
 
-    /* 🔴 Botão de SAIR */
     .btn-danger{
       background:#dc2626;
       color:#ffffff;
@@ -346,11 +345,16 @@
           </div>
         </div>
         <div class="toolbar">
+          <!-- ⚠ estes caminhos são os mesmos do dashboard antigo -->
           <a class="btn btn-primary" href="/relatorios/exportar/creditos.csv" target="_blank">Créditos CSV</a>
           <a class="btn btn-primary" href="/relatorios/exportar/pagamentos.csv" target="_blank">Pagamentos CSV</a>
           <button class="btn btn-secondary" type="button" onclick="abrirMensalPadrao()">
             Relatório mensal PDF
           </button>
+          <!-- API Johnson -->
+          <a class="btn btn-secondary" href="/docs" target="_blank">
+            API Johnson
+          </a>
           <!-- Gestão de usuários: começa escondido, só admin vê -->
           <a id="btnGestaoUsuarios" class="btn btn-secondary" href="/admin/users" style="display:none;">
             Gestão de usuários
@@ -362,6 +366,7 @@
         </div>
       </div>
 
+      <!-- filtros ano/mês/responsável -->
       <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
         <div class="form-group" style="max-width:100px;">
           <label for="anoMensal">Ano</label>
@@ -383,6 +388,20 @@
           <label for="respMensal">Responsável / Atendente (opcional)</label>
           <input id="respMensal" type="text" placeholder="Nome a aparecer no PDF" />
         </div>
+      </div>
+
+      <!-- NOVO: Fundo total para investir -->
+      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+        <div class="form-group" style="max-width:220px;">
+          <label for="fundoInicial">Fundo total para investir (Kz)</label>
+          <input id="fundoInicial" type="text" placeholder="ex: 1 000 000" />
+        </div>
+        <button type="button" class="btn btn-secondary btn-small" onclick="guardarFundo()">
+          Guardar fundo
+        </button>
+        <span class="muted">
+          O fundo disponível é calculado automaticamente: fundo inicial − total concedido.
+        </span>
       </div>
     </div>
 
@@ -454,6 +473,7 @@
       </form>
     </div>
 
+    <!-- Cards principais -->
     <div class="grid-cards" id="cards"></div>
 
     <div class="row">
@@ -538,6 +558,47 @@
       }) + " Kz";
     };
 
+    const STORAGE_KEY_FUNDO = "ukamba_fundo_inicial";
+
+    function lerFundoInicial(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY_FUNDO);
+        if(!raw) return 0;
+        const num = Number(String(raw).replace(/\s/g,"").replace(",","."));
+        return isNaN(num) ? 0 : num;
+      }catch(e){
+        return 0;
+      }
+    }
+
+    function preencherInputFundo(){
+      const inp = document.getElementById('fundoInicial');
+      if(!inp) return;
+      const v = lerFundoInicial();
+      if(v > 0){
+        inp.value = v.toLocaleString('pt-PT',{
+          minimumFractionDigits:2,
+          maximumFractionDigits:2
+        });
+      }
+    }
+
+    function guardarFundo(){
+      const inp = document.getElementById('fundoInicial');
+      if(!inp) return;
+      const raw = inp.value || "";
+      const num = Number(String(raw).replace(/\s/g,"").replace(",","."));
+      const v = isNaN(num) ? 0 : num;
+      try{
+        localStorage.setItem(STORAGE_KEY_FUNDO, String(v));
+      }catch(e){}
+      // recarrega para atualizar o card de Fundo disponível
+      loadDashboard().catch(err => {
+        document.getElementById('geradoEm').textContent =
+          "Erro ao carregar dashboard: " + err;
+      });
+    }
+
     function abrirMensalPadrao(){
       const hoje = new Date();
       let ano = document.getElementById('anoMensal').value;
@@ -573,7 +634,13 @@
 
       const c = data.cards || {};
 
+      // 🔵 cálculo do fundo disponível
+      const fundoInicial = lerFundoInicial();
+      const totalConcedidoNum = Number(c.total_concedido || 0);
+      const fundoDisponivel = Math.max(0, fundoInicial - totalConcedidoNum);
+
       const items = [
+        ["Fundo disponível", kz(fundoDisponivel)],
         ["Total concedido", kz(c.total_concedido)],
         ["Total a receber", kz(c.total_a_receber)],
         ["Total pago", kz(c.total_pago)],
@@ -718,7 +785,6 @@
       try{
         const token = localStorage.getItem("token");
         if(!token){
-          // sem token, não tenta chamar whoami
           return;
         }
 
@@ -735,7 +801,6 @@
         const data = await res.json();
         const role = data.role; // "admin", "gestor" ou "leitor"
 
-        // ADMIN → vê Gestão de usuários
         if(role === "admin"){
           const btn = document.getElementById("btnGestaoUsuarios");
           if(btn){
@@ -743,7 +808,6 @@
           }
         }
 
-        // LEITOR → não vê o card de Novo Crédito
         if(role === "leitor"){
           const cardNovo = document.getElementById("cardNovoCredito");
           if(cardNovo){
@@ -762,6 +826,7 @@
     });
     initNovoCreditoForm();
     verificarPermissao();
+    preencherInputFundo();
   </script>
 </body>
 </html>

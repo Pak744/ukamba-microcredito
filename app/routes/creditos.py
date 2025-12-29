@@ -1,20 +1,21 @@
+# app/routes/creditos.py
+
+from datetime import date
+from typing import List
+
 from fastapi import APIRouter, HTTPException, Body, Depends
 from sqlalchemy.orm import Session
-from datetime import date
 
 from app.db import SessionLocal
 from app.db_models import CreditoDB, PagamentoDB
 from app import db_models
-from app.auth import require_roles, admin_only, admin_ou_gestor  # ✅ agora com atalhos
-
+from app.auth import admin_only, admin_ou_gestor
 from app.models.schemas import (
     CreditoCreate,
     CreditoUpdate,
     CreditoOut,
-    PagamentoOut,
     CreditoPagamentosOut,
 )
-
 from app.services.juros import (
     calcular_total_reembolsar,
     calcular_prestacao_mensal,
@@ -82,9 +83,41 @@ def _pagamento_to_dict(p: PagamentoDB) -> dict:
     }
 
 
+def _recalcular_credito(c: CreditoDB, db: Session):
+    """
+    Recalcula valor_pago, saldo_em_aberto e estado
+    a partir de TODOS os pagamentos do crédito.
+    Usamos isto quando abrimos o crédito, para corrigir
+    qualquer diferença antiga.
+    """
+    pagamentos = (
+        db.query(PagamentoDB)
+        .filter(PagamentoDB.id_credito == c.id_credito)
+        .all()
+    )
+
+    total_pago = sum(float(p.valor_pago_no_dia or 0) for p in pagamentos)
+    c.valor_pago = total_pago
+
+    if c.valor_total_reembolsar is None:
+        c.valor_total_reembolsar = 0.0
+
+    c.saldo_em_aberto = max(
+        0.0,
+        float(c.valor_total_reembolsar) - float(c.valor_pago),
+    )
+
+    c.estado = calcular_estado(
+        c.data_fim,
+        c.saldo_em_aberto,
+        hoje=date.today(),
+    )
+
+
 # =========================
 # Rotas
 # =========================
+
 @router.get("/simular", summary="Simular Crédito")
 def simular_credito(valor_solicitado: float, duracao_meses: int):
     try:
@@ -104,29 +137,14 @@ def simular_credito(valor_solicitado: float, duracao_meses: int):
 
 @router.post("", response_model=CreditoOut, summary="Criar Crédito")
 def criar_credito(
-    payload: CreditoCreate = Body(
-        ...,
-        examples={
-            "exemplo_1": {
-                "summary": "Exemplo de criação de crédito",
-                "value": {
-                    "nome": "João Manuel",
-                    "telefone": "923456789",
-                    "profissao": "Técnico Administrativo",
-                    "salario_mensal": 180000,
-                    "valor_solicitado": 300000,
-                    "duracao_meses": 6,
-                    "data_inicio": "2025-01-10",
-                    "comentario": "Crédito para despesas escolares",
-                },
-            }
-        },
-    ),
+    payload: CreditoCreate = Body(...),
     db: Session = Depends(get_db),
-    current_user: db_models.UserDB = Depends(admin_ou_gestor),  # ✅ só ADMIN ou GESTOR
+    current_user: db_models.UserDB = Depends(admin_ou_gestor),  # ADMIN ou GESTOR
 ):
     try:
-        taxa, total = calcular_total_reembolsar(float(payload.valor_solicitado), int(payload.duracao_meses))
+        taxa, total = calcular_total_reembolsar(
+            float(payload.valor_solicitado), int(payload.duracao_meses)
+        )
         prestacao = calcular_prestacao_mensal(float(total), int(payload.duracao_meses))
         data_fim = calcular_data_fim(payload.data_inicio, int(payload.duracao_meses))
 
@@ -161,9 +179,15 @@ def criar_credito(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("", response_model=list[CreditoOut], summary="Listar Créditos")
+@router.get("", response_model=List[CreditoOut], summary="Listar Créditos")
 def listar_creditos(db: Session = Depends(get_db)):
     itens = db.query(CreditoDB).order_by(CreditoDB.id_credito.desc()).all()
+
+    # Garante que os valores estão coerentes
+    for c in itens:
+        _recalcular_credito(c, db)
+    db.commit()
+
     return [_credito_to_dict(i) for i in itens]
 
 
@@ -172,6 +196,11 @@ def obter_credito(id_credito: int, db: Session = Depends(get_db)):
     c = db.query(CreditoDB).filter(CreditoDB.id_credito == id_credito).first()
     if not c:
         raise HTTPException(status_code=404, detail="Crédito não encontrado")
+
+    _recalcular_credito(c, db)
+    db.commit()
+    db.refresh(c)
+
     return _credito_to_dict(c)
 
 
@@ -180,7 +209,7 @@ def atualizar_credito(
     id_credito: int,
     payload: CreditoUpdate,
     db: Session = Depends(get_db),
-    current_user: db_models.UserDB = Depends(admin_ou_gestor),  # ✅ só ADMIN ou GESTOR
+    current_user: db_models.UserDB = Depends(admin_ou_gestor),  # ADMIN ou GESTOR
 ):
     c = db.query(CreditoDB).filter(CreditoDB.id_credito == id_credito).first()
     if not c:
@@ -188,15 +217,18 @@ def atualizar_credito(
 
     data = payload.model_dump(exclude_unset=True)
 
-    # Se mexer em valor_solicitado/duracao/data_inicio, recalcula tudo
-    vai_recalcular = any(k in data for k in ("valor_solicitado", "duracao_meses", "data_inicio"))
+    vai_recalcular = any(
+        k in data for k in ("valor_solicitado", "duracao_meses", "data_inicio")
+    )
 
     for k, v in data.items():
         setattr(c, k, v)
 
     if vai_recalcular:
         try:
-            taxa, total = calcular_total_reembolsar(float(c.valor_solicitado), int(c.duracao_meses))
+            taxa, total = calcular_total_reembolsar(
+                float(c.valor_solicitado), int(c.duracao_meses)
+            )
             prestacao = calcular_prestacao_mensal(float(total), int(c.duracao_meses))
             data_fim = calcular_data_fim(c.data_inicio, int(c.duracao_meses))
 
@@ -205,16 +237,20 @@ def atualizar_credito(
             c.prestacao_mensal = round(float(prestacao), 2)
             c.data_fim = data_fim
 
-            # Mantém valor_pago existente e recalcula saldo/estado
-            c.saldo_em_aberto = round(float(c.valor_total_reembolsar) - float(c.valor_pago), 2)
+            c.saldo_em_aberto = round(
+                float(c.valor_total_reembolsar) - float(c.valor_pago), 2
+            )
             if c.saldo_em_aberto < 0:
                 c.saldo_em_aberto = 0.0
-            c.estado = calcular_estado(c.data_fim, c.saldo_em_aberto, hoje=date.today())
+            c.estado = calcular_estado(
+                c.data_fim, c.saldo_em_aberto, hoje=date.today()
+            )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
     else:
-        # Sempre garante estado coerente
-        c.estado = calcular_estado(c.data_fim, float(c.saldo_em_aberto), hoje=date.today())
+        c.estado = calcular_estado(
+            c.data_fim, float(c.saldo_em_aberto), hoje=date.today()
+        )
 
     db.commit()
     db.refresh(c)
@@ -225,14 +261,17 @@ def atualizar_credito(
 def apagar_credito(
     id_credito: int,
     db: Session = Depends(get_db),
-    # ❌ removido current_user: db_models.UserDB = Depends(admin_only)
+    current_user: db_models.UserDB = Depends(admin_only),  # Só ADMIN
 ):
     c = db.query(CreditoDB).filter(CreditoDB.id_credito == id_credito).first()
     if not c:
         raise HTTPException(status_code=404, detail="Crédito não encontrado")
 
-    # ✅ BLOQUEIO: se houver pagamentos, não apaga
-    existe_pagamento = db.query(PagamentoDB).filter(PagamentoDB.id_credito == id_credito).first()
+    existe_pagamento = (
+        db.query(PagamentoDB)
+        .filter(PagamentoDB.id_credito == id_credito)
+        .first()
+    )
     if existe_pagamento:
         raise HTTPException(
             status_code=409,
@@ -244,11 +283,20 @@ def apagar_credito(
     return {"ok": True, "msg": f"Crédito {id_credito} apagado com sucesso"}
 
 
-@router.get("/{id_credito}/pagamentos", response_model=CreditoPagamentosOut, summary="Obter crédito + pagamentos")
+@router.get(
+    "/{id_credito}/pagamentos",
+    response_model=CreditoPagamentosOut,
+    summary="Obter crédito + pagamentos",
+)
 def obter_credito_com_pagamentos(id_credito: int, db: Session = Depends(get_db)):
     c = db.query(CreditoDB).filter(CreditoDB.id_credito == id_credito).first()
     if not c:
         raise HTTPException(status_code=404, detail="Crédito não encontrado")
+
+    # 👉 Recalcula sempre que abrimos os detalhes
+    _recalcular_credito(c, db)
+    db.commit()
+    db.refresh(c)
 
     pagamentos = (
         db.query(PagamentoDB)

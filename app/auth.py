@@ -1,18 +1,15 @@
 # app/auth.py
 import os
+import hashlib
 from datetime import datetime, timedelta
 from typing import Optional, List
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import Depends, HTTPException, status, Request
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.deps import get_db
 from app import db_models
-
-import hashlib
-
 
 # ==============================
 # Configurações JWT
@@ -20,11 +17,6 @@ import hashlib
 SECRET_KEY = os.getenv("SECRET_KEY", "COLOQUE_AQUI_UMA_CHAVE_BEM_SECRETA_E_GRANDE")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 8  # 8 horas
-
-# ⚠️ MUITO IMPORTANTE
-# tokenUrl DEVE ser a rota REAL de login
-# A sua rota de login em main.py é /token, então aqui TEM que ser /token
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
 
 # ==============================
@@ -77,10 +69,41 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 # ==============================
-# Dependências
+# Dependências de autenticação
 # ==============================
+def _get_token_from_request(request: Request) -> Optional[str]:
+    """
+    Tenta obter o token nesta ordem:
+    1) Header Authorization: Bearer xxx
+    2) Cookie "Authorization" (aceita "Bearer xxx" ou só o token)
+    3) Cookie "access_token"
+    """
+    # 1) Header
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        token = auth_header.strip()
+        if token.lower().startswith("bearer "):
+            return token[7:].strip()
+        return token
+
+    # 2) Cookie Authorization
+    auth_cookie = request.cookies.get("Authorization")
+    if auth_cookie:
+        token = auth_cookie.strip()
+        if token.lower().startswith("bearer "):
+            return token[7:].strip()
+        return token
+
+    # 3) Cookie access_token
+    access_cookie = request.cookies.get("access_token")
+    if access_cookie:
+        return access_cookie.strip()
+
+    return None
+
+
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
     db: Session = Depends(get_db),
 ) -> db_models.UserDB:
     credentials_exception = HTTPException(
@@ -88,6 +111,10 @@ async def get_current_user(
         detail="Not authenticated",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    token = _get_token_from_request(request)
+    if not token:
+        raise credentials_exception
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -115,7 +142,14 @@ async def get_current_active_user(
     return current_user
 
 
+# ==============================
+# Controle de permissões por role
+# ==============================
 def require_roles(roles: List[db_models.UserRole]):
+    """
+    Cria uma dependência que obriga o usuário a ter uma das roles especificadas.
+    Usa Enum UserRole (ADMIN, GESTOR, LEITOR).
+    """
     def dependency(
         current_user: db_models.UserDB = Depends(get_current_active_user),
     ) -> db_models.UserDB:
@@ -140,8 +174,10 @@ admin_ou_gestor = require_roles([
 
 
 # ==============================
-# Login handler
+# Login handler (usado em /token)
 # ==============================
+from fastapi.security import OAuth2PasswordRequestForm  # import aqui para evitar ciclo
+
 def get_login_route():
     async def login_for_access_token(
         form_data: OAuth2PasswordRequestForm = Depends(),

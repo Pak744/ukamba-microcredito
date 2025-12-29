@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse  # 👈 adicionámos JSONResponse
 from fastapi import APIRouter
 
 from app.db import Base, engine, SessionLocal
@@ -71,7 +71,32 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    return await login_for_access_token(form_data, db)
+    """
+    Faz login, devolve JSON com o token
+    E também grava o token em cookies:
+      - Authorization = Bearer <token>
+      - access_token = <token>
+    """
+    data = await login_for_access_token(form_data, db)
+
+    access_token = data["access_token"]
+
+    resp = JSONResponse(content=data)
+    # Cookie completo (para debug/frontends que usam "Bearer ...")
+    resp.set_cookie(
+        key="Authorization",
+        value=f"Bearer {access_token}",
+        httponly=True,
+        samesite="lax",
+    )
+    # Cookie apenas com o token cru
+    resp.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        samesite="lax",
+    )
+    return resp
 
 # ==============================
 # ROTA PARA RESET DO ADMIN
