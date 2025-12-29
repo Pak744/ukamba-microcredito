@@ -23,7 +23,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 8  # 8 horas
 
 # ⚠️ MUITO IMPORTANTE
 # tokenUrl DEVE ser a rota REAL de login
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+# A sua rota de login em main.py é /token, então aqui TEM que ser /token
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
 
 
 # ==============================
